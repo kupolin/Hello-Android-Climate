@@ -33,9 +33,9 @@ public class WeatherController extends AppCompatActivity
 {
     // Constants:
     // i.e.: api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787
-    private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
+    //private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
     // test URL.
-    // final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787";
+     final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787";
 
   // App ID to use OpenWeather data
     private final String APP_ID = "672568ea088e0bd3e7531e72fd524787";
@@ -49,9 +49,10 @@ public class WeatherController extends AppCompatActivity
     private final String LOCATION_PROVIDER = LocationManager.GPS_PROVIDER;
 
     // Member Variables:
-    private TextView mCityLabel;
-    private ImageView mWeatherImage;
-    private TextView mTemperatureLabel;
+    private TextView mLocLabel_tv;
+    private ImageView mWeather_iv;
+    private TextView mTempLabel_tv;
+    private ImageButton mChangeCity_bt;
 
     // TODO: Declare a LocationManager and a LocationListener here:
     // component that will start or stop request location updates.
@@ -64,6 +65,7 @@ public class WeatherController extends AppCompatActivity
     LocationListener mLocationListener = new LocationListener()
     {
         // update the weather when location changes.
+        //TODO: during onCreate if location is cached this is not called. check
         @Override
         public void onLocationChanged(Location location)
         {
@@ -74,6 +76,7 @@ public class WeatherController extends AppCompatActivity
             //api query
             RequestParams rp = new RequestParams("lat", latStr, "long", longStr, "appid", APP_ID);
             getRequestWeather(rp);
+
         }
 
         @Override
@@ -109,12 +112,12 @@ public class WeatherController extends AppCompatActivity
         setContentView(R.layout.weather_controller_layout);
 
         // Linking the elements in the layout to Java code
-        mCityLabel = findViewById(R.id.locationTV);
-        mWeatherImage = findViewById(R.id.weatherSymbolIV);
-        mTemperatureLabel = findViewById(R.id.tempTV);
-        ImageButton changeCityButton = findViewById(R.id.changeCityButton);
+        this.mLocLabel_tv = findViewById(R.id.locationTV);
+        this.mWeather_iv = findViewById(R.id.weatherSymbolIV);
+        this.mTempLabel_tv = findViewById(R.id.tempTV);
+        this.mChangeCity_bt = findViewById(R.id.changeCityButton);
 
-        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        this.mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         //TODO: how to handle versions below marshmallow 6.0. OR just target marshmallo 6.0+
         //setting up listener
@@ -188,40 +191,6 @@ public class WeatherController extends AppCompatActivity
         log("onStop called");
     }
 
-    // TODO: Add letsDoSomeNetworking(RequestParams params) here:
-    private void getRequestWeather(RequestParams rp)
-    {
-        log("getRequestWeather() called");
-        // uses a background thread to send requests. A request always is followed by a response
-        AsyncHttpClient client = new AsyncHttpClient();
-        client.get(WEATHER_URL, rp, new JsonHttpResponseHandler()
-        {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response)
-            {
-               log("Sucess. JSON: " + response.toString());
-               // TODO: parse response string to display to UI.
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONArray errorResponse)
-            {
-                // inside anonymous class WeatherController.this
-                Log.e(this.getClass().getSimpleName(), "Fail " + throwable.toString());
-                log("Status code " + statusCode);
-
-                Toast.makeText(getBaseContext(), "Request Failed", Toast.LENGTH_SHORT).show();
-            }
-        });
-          //?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787
-
-    }
-
-
-
-    // TODO: Add updateUI() here:
-
-
 
     // TODO: Add onPause() here:
 
@@ -245,10 +214,48 @@ public class WeatherController extends AppCompatActivity
         }
         */
     }
-
+/*
     private void enableLocationSettings() {
         Intent settingsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         startActivity(settingsIntent);
+    }
+*/
+    private void getRequestWeather(RequestParams rp)
+    {
+        log("getRequestWeather() called");
+        // uses a background thread to send requests. A request always is followed by a response
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get(WEATHER_URL, rp, new JsonHttpResponseHandler()
+        {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response)
+            {
+                log("Sucess. JSON: " + response.toString());
+                // TODO: parse response string to display to UI.
+                WeatherDataModel model = WeatherDataModel.fromJSON(response);
+                updateUI(model);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONArray errorResponse)
+            {
+                // inside anonymous class WeatherController.this
+                Log.e(this.getClass().getSimpleName(), "Fail " + throwable.toString());
+                log("Status code " + statusCode);
+
+                Toast.makeText(getBaseContext(), "Request Failed", Toast.LENGTH_SHORT).show();
+            }
+        });
+        //?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787
+    }
+
+    private void updateUI(WeatherDataModel weather)
+    {
+        this.mTempLabel_tv.setText(weather.getTemperature());
+        this.mLocLabel_tv.setText(weather.getCity());
+        int resId = getResources().getIdentifier(weather.getIconName(), "drawable", getPackageName());
+        this.mWeather_iv.setImageResource(resId);
+        //api 21 this.mWeather_iv.setImageDrawable(getDrawable(getResources().getIdentifier(weather.getIconName(), "drawable", getPackageName())));
     }
 
 }

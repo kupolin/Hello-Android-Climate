@@ -1,7 +1,6 @@
 package me.jonlin.android.climate;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,8 +8,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -45,6 +44,7 @@ public class WeatherController extends AppCompatActivity
     // Distance between location updates (1000m or 1km)
     private final float MIN_DISTANCE = 1000;
     private final int LOC_PERM_REQUEST_CODE = 1;
+    private final int CHANGECITY_REQ_CODE = 2;
     //Location Provider
     //fine location. If using coarse location use network_provider because cell tower || wifi network
     private final String LOCATION_PROVIDER = LocationManager.GPS_PROVIDER;
@@ -125,7 +125,7 @@ public class WeatherController extends AppCompatActivity
             public void onClick(View view)
             {
                 Intent intent = new Intent(getBaseContext(), ChangeCityController.class);
-                startActivity(intent);
+                startActivityForResult(intent, CHANGECITY_REQ_CODE);
             }
         });
         //TODO: how to handle versions below marshmallow 6.0. OR just target marshmallo 6.0+
@@ -172,23 +172,27 @@ public class WeatherController extends AppCompatActivity
     {
         super.onResume();
         log("onResume called");
+        attachLocManListener();
+    }
 
-        Intent i = getIntent();
-        String city = i.getStringExtra("city");
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data)
+    {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        String city = null;
+        if(data != null)
+            city = data.getStringExtra("city");
 
         if(city != null)
         {
             getWeatherForNewCity(city);
         }
-
-        attachLocManListener();
     }
-
     private void getWeatherForNewCity(String city)
     {
-         RequestParams params = new RequestParams();
-         params.put("q", city);
-         params.put("appid", APP_ID);
+         RequestParams params = new RequestParams("q", city, "appid", APP_ID);
          getRequestWeather(params);
     }
 
@@ -253,6 +257,7 @@ public class WeatherController extends AppCompatActivity
         log("getRequestWeather() called");
         // uses a background thread to send requests. A request always is followed by a response
         AsyncHttpClient client = new AsyncHttpClient();
+
         client.get(WEATHER_URL, rp, new JsonHttpResponseHandler()
         {
             @Override

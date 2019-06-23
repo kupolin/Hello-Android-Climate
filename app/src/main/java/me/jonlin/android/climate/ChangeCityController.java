@@ -31,17 +31,21 @@ public class ChangeCityController extends AppCompatActivity
                 finish();
             }
         });
+
         query_et.setOnEditorActionListener(new TextView.OnEditorActionListener()
         {
             @Override
             public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent)
             {
+                //when user clicks done
                 String newCity = query_et.getText().toString();
                 Intent i = new Intent(getBaseContext(), WeatherController.class);
                 i.putExtra("city", newCity);
-                startActivity(i);
+                setResult(RESULT_OK, i);
+                finish();
                 return false;
             }
         });
+
     }
 }

@@ -14,6 +14,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -33,11 +34,11 @@ public class WeatherController extends AppCompatActivity
 {
     // Constants:
     // i.e.: api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787
-    //private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
+    private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
     // test URL.
-     final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787";
+    //final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=672568ea088e0bd3e7531e72fd524787";
 
-  // App ID to use OpenWeather data
+    // App ID to use OpenWeather data
     private final String APP_ID = "672568ea088e0bd3e7531e72fd524787";
     // Time between location updates (5000 milliseconds or 5 seconds)
     private final long MIN_TIME = 5000;
@@ -65,7 +66,6 @@ public class WeatherController extends AppCompatActivity
     LocationListener mLocationListener = new LocationListener()
     {
         // update the weather when location changes.
-        //TODO: during onCreate if location is cached this is not called. check
         @Override
         public void onLocationChanged(Location location)
         {
@@ -76,7 +76,6 @@ public class WeatherController extends AppCompatActivity
             //api query
             RequestParams rp = new RequestParams("lat", latStr, "long", longStr, "appid", APP_ID);
             getRequestWeather(rp);
-
         }
 
         @Override
@@ -89,15 +88,15 @@ public class WeatherController extends AppCompatActivity
         public void onProviderEnabled(String s)
         {
             log("onProviderEnabled callback");
-        }
+    }
 
-        @Override
-        public void onProviderDisabled(String s)
-        {
-            log("onProviderDisabled callback");
-            //disable network / gps. i.e. wifi, location, airplane mnode
-        }
-        //min time between updates, min distance between updates.
+    @Override
+    public void onProviderDisabled(String s)
+    {
+        log("onProviderDisabled callback");
+        //disable network / gps. i.e. wifi, location, airplane mnode
+    }
+    //min time between updates, min distance between updates.
     };
 
     private void log(String str)
@@ -119,27 +118,19 @@ public class WeatherController extends AppCompatActivity
 
         this.mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
+        //listeners
+        this.mChangeCity_bt.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                Intent intent = new Intent(getBaseContext(), ChangeCityController.class);
+                startActivity(intent);
+            }
+        });
         //TODO: how to handle versions below marshmallow 6.0. OR just target marshmallo 6.0+
         //setting up listener
-        if (ActivityCompat.checkSelfPermission(getBaseContext(),  Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            && ActivityCompat.checkSelfPermission(getBaseContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
-            //setup dialog
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-
-            //prompt for request location of user. GPS enabled.
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, LOC_PERM_REQUEST_CODE);
-            return;
-        }
-
-        log("!!!133 come here? ever>?");
-        mLocationManager.requestLocationUpdates(LOCATION_PROVIDER, MIN_TIME, MIN_DISTANCE, mLocationListener);
+        attachLocManListener();
 
 
         // TODO: Add an OnClickListener to the changeCityButton here:
@@ -153,21 +144,21 @@ public class WeatherController extends AppCompatActivity
         log("onRequestPermissionResult() call");
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         // if requesting location without permission, app will crash.
-        if(requestCode == LOC_PERM_REQUEST_CODE)
+        if (requestCode == LOC_PERM_REQUEST_CODE)
         {
             //must contain one element. Hardcode that assume only location permission is requested.
             //result of permissions[0] = grantResults[0]
             // location request granted. Another way to check permission instead of using AppCompat. Manifest.
-            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             {
                 log("onRequestPermissionResult: permission granted");
+                attachLocManListener();
                 // not compile error. Runtime error complaint however it is handled in the if statement.
-                mLocationManager.requestLocationUpdates(LOCATION_PROVIDER, MIN_TIME, MIN_DISTANCE, mLocationListener);
-            }
-            else
+                //mLocationManager.requestLocationUpdates(LOCATION_PROVIDER, MIN_TIME, MIN_DISTANCE, mLocationListener);
+            } else
             {
                 // prompt dialog if deny because app wont work as intended.
-                ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, LOC_PERM_REQUEST_CODE);
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOC_PERM_REQUEST_CODE);
                 log("permission denied");
             }
         }
@@ -181,9 +172,41 @@ public class WeatherController extends AppCompatActivity
     {
         super.onResume();
         log("onResume called");
+
+        Intent i = getIntent();
+        String city = i.getStringExtra("city");
+
+        if(city != null)
+        {
+            getWeatherForNewCity(city);
+        }
+
+        attachLocManListener();
     }
 
+    private void getWeatherForNewCity(String city)
+    {
+         RequestParams params = new RequestParams();
+         params.put("q", city);
+         params.put("appid", APP_ID);
+         getRequestWeather(params);
+    }
 
+    private void attachLocManListener()
+    {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mLocationManager.requestLocationUpdates(LOCATION_PROVIDER, MIN_TIME, MIN_DISTANCE, mLocationListener);
+    }
     @Override
     protected void onStop()
     {
@@ -191,8 +214,13 @@ public class WeatherController extends AppCompatActivity
         log("onStop called");
     }
 
-
-    // TODO: Add onPause() here:
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        if(mLocationManager != null)
+            mLocationManager.removeUpdates(mLocationListener);
+    }
 
     @Override
     protected void onStart() {
